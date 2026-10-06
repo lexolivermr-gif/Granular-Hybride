@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Granular Hybrid — Démo instrument (analo + sampler + granulaire)</title>
+<style>
+  :root{
+    --bg:#0b0d12; --bg2:#12151d; --card:#171b25; --card2:#1e2330; --line:#2a3040;
+    --txt:#e6ebf5; --dim:#8b94a8; --amber:#ffb248; --teal:#3fd8c2; --violet:#a97bff;
+    --blue:#5aa9ff; --green:#7ee081; --red:#ff6b6b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:radial-gradient(1200px 700px at 50% -10%,#1a2030 0%,var(--bg) 60%);
+    color:var(--txt);font:13px/1.35 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+  #app{max-width:1420px;margin:0 auto;padding:10px 12px 22px}
+  header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(180deg,#1b202c,#141822);
+    border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:10px;box-shadow:0 8px 30px #0007}
+  .brand{display:flex;align-items:baseline;gap:8px;margin-right:auto}
+  .brand b{font-size:17px;letter-spacing:.3px}
+  .brand b i{font-style:normal;color:var(--amber)}
+  .brand span{color:var(--dim);font-size:11px;letter-spacing:.6px;text-transform:uppercase}
+  .hgroup{display:flex;align-items:center;gap:6px}
+  button,select,input[type=file]::file-selector-button{font:inherit;color:var(--txt);background:#222836;border:1px solid var(--line);
+    border-radius:8px;padding:6px 10px;cursor:pointer}
+  button:hover,select:hover{background:#2b3242}
+  button.on{background:linear-gradient(180deg,#2f6b5f,#1f443c);border-color:#3fd8c255;color:#dffaf4}
+  button.warn{background:#3a2230;border-color:#ff6b6b44}
+  select{padding:5px 8px}
+  #boot{position:fixed;inset:0;background:#070a1188;backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:50}
+  #boot .box{background:linear-gradient(180deg,#1c2230,#131824);border:1px solid var(--line);border-radius:18px;padding:26px 30px;
+    text-align:center;max-width:560px;box-shadow:0 20px 60px #000a}
+  #boot h1{margin:0 0 6px;font-size:22px}
+  #boot p{color:var(--dim);margin:6px 0 18px;font-size:12.5px}
+  #boot .go{font-size:16px;padding:12px 26px;border-radius:999px;background:linear-gradient(180deg,#ffca6e,#f09217);
+    color:#231603;font-weight:700;border:none;box-shadow:0 8px 24px #ffb24844}
+  #panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:9px;align-items:start}
+  .panel{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:13px;padding:8px 9px 10px;
+    box-shadow:0 6px 18px #0006}
+  .panel h3{margin:0 0 7px;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);
+    display:flex;align-items:center;gap:6px}
+  .panel h3::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--acc,var(--amber));box-shadow:0 0 8px var(--acc,var(--amber))}
+  .knobs{display:flex;flex-wrap:wrap;gap:4px 2px}
+  .kw{width:58px;display:flex;flex-direction:column;align-items:center;user-select:none}
+  .kw .lbl{font-size:9.5px;color:var(--dim);text-align:center;line-height:1.15;margin-top:1px;max-width:56px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kw .val{font-size:9.5px;color:var(--txt);opacity:.85;font-variant-numeric:tabular-nums}
+  .knob{cursor:ns-resize;touch-action:none}
+  .ctl{width:100%;display:flex;flex-direction:column;gap:5px}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .row select{flex:1;min-width:0}
+  .tg{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--dim)}
+  #vizWrap{display:grid;grid-template-columns:1fr 300px;gap:9px;margin-top:9px}
+  #vizBox{background:linear-gradient(180deg,#10141d,#0b0e15);border:1px solid var(--line);border-radius:13px;padding:6px;position:relative;overflow:hidden}
+  #viz{width:100%;height:150px;display:block}
+  #sampleBox{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:13px;padding:8px 10px}
+  #smpCanvas{width:100%;height:44px;display:block;border-radius:7px;background:#0d111a;margin:5px 0 6px}
+  #drop{border:1px dashed #3a4356;border-radius:9px;padding:7px;text-align:center;color:var(--dim);font-size:11px;transition:.15s}
+  #drop.hot{border-color:var(--teal);color:var(--teal);background:#3fd8c211}
+  #kbdWrap{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:13px;padding:8px 10px 10px;margin-top:9px}
+  #keys{position:relative;height:82px;display:flex;gap:0;margin-top:6px;user-select:none;touch-action:none}
+  .wk{position:relative;flex:1;background:linear-gradient(180deg,#e9edf5,#c3cad8);border:1px solid #6a7284;border-radius:0 0 5px 5px;margin:0 .5px}
+  .wk.down{background:linear-gradient(180deg,#ffd08a,#e79b2a)}
+  .bk{position:absolute;top:0;width:60%;height:60%;background:linear-gradient(180deg,#2a2f3c,#12151d);border:1px solid #05070c;
+    border-radius:0 0 4px 4px;z-index:2;transform:translateX(-50%);cursor:pointer}
+  .bk.down{background:linear-gradient(180deg,#c99b52,#8a6420)}
+  .legend{color:var(--dim);font-size:10.5px;margin-top:5px;display:flex;gap:14px;flex-wrap:wrap}
+  code{background:#0d111a;border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--teal);font-size:11px}
+  @media (max-width:900px){#vizWrap{grid-template-columns:1fr}.brand b{font-size:15px}}
+</style>
+</head>
+<body>
+<div id="boot"><div class="box">
+  <h1>Granular <span style="color:var(--amber)">Hybrid</span></h1>
+  <p>Synthé analogique + sampler + moteur granulaire, combinables et mixables en continu.<br>
+  Cliquez pour autoriser l'audio, puis jouez au clavier.</p>
+  <button class="go" id="startBtn">▶ DÉMARRER L'AUDIO</button>
+  <p style="margin-top:16px">Aucune ressource externe : le sample bank est synthétisé en direct par le DSP.</p>
+</div></div>
+
+<div id="app">
+  <header>
+    <div class="brand"><b>Granular <i>Hybrid</i></b><span>analo · sampler · grain</span></div>
+    <div class="hgroup">
+      <select id="presetSel" title="Presets"></select>
+      <button id="randBtn" title="Randomiser le moteur granulaire">🎲 Grain</button>
+      <button id="panicBtn" class="warn" title="Tout couper">■ Panic</button>
+      <div id="masterKw"></div>
+      <div id="vizInfo" style="min-width:78px;color:var(--dim);font-size:10.5px"></div>
+    </div>
+  </header>
+  <main id="panels"></main>
+  <section id="vizWrap">
+    <div id="vizBox">
+      <canvas id="viz"></canvas>
+      <div class="legend" style="padding:2px 4px 0">
+        <span style="color:var(--teal)">— waveform out</span>
+        <span style="color:var(--violet)">— spectre</span>
+        <span style="color:var(--amber)">| grains actifs</span>
+        <span id="cpu"></span>
+      </div>
+    </div>
+    <div id="sampleBox">
+      <h3 style="margin:0 0 4px;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)">Sample bank (source sampler + granulaire)</h3>
+      <canvas id="smpCanvas"></canvas>
+      <div class="row">
+        <select id="bankSel"></select>
+        <button id="loadBtn">📂 Charger WAV</button>
+      </div>
+      <input type="file" id="fileIn" accept="audio/*" style="display:none">
+      <div id="drop">Glissez-déposez un fichier audio ici</div>
+      <div class="legend" id="smpInfo"></div>
+    </div>
+  </section>
+  <section id="kbdWrap">
+    <div class="row" style="justify-content:space-between">
+      <div style="font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim)">Clavier</div>
+      <div class="row">
+        <label class="tg">Octave <b id="octLbl">C3</b></label>
+        <button id="octDown">◀ Z</button><button id="octUp">X ▶</button>
+        <span class="tg">Polyphonie / Mono / Glide → panneau <b style="color:#ffb248">Global</b></span>
+      </div>
+    </div>
+    <div id="keys"></div>
+    <div class="legend">
+      <span>Notes : <code>W S E D F T G Y H U J K</code> (position physique, fonctionne en AZERTY)</span>
+      <span>Octave : <code>Z</code> / <code>X</code></span>
+      <span>Panic : <code>Espace</code></span>
+      <span>Molette souris sur un knob = réglage · double-clic = défaut · Maj = fin</span>
+    </div>
+  </section>
+</div>
