@@ -1,0 +1,29 @@
+name: Build VST3 (Windows)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Compilation du VST3 (Windows x64)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Récupérer JUCE
+        run: git clone --depth 1 https://github.com/juce-framework/JUCE.git vst3/JUCE
+
+      - name: Configurer
+        working-directory: vst3
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Compiler
+        working-directory: vst3
+        run: cmake --build build --config Release --target GranularHybrid_VST3
+
+      - name: Envoyer le VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: GranularHybrid-VST3-Windows
+          path: vst3/build/GranularHybrid_artefacts/Release/VST3/
